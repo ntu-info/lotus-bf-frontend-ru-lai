@@ -1,7 +1,23 @@
-.DS_Store
-node_modules/
+# Build artifacts
 /dist
-/.env
-.env
-.vscode/
 
+# Node modules
+/node_modules
+
+# Vite cache
+/.vite
+
+# gh-pages cache
+/.cache
+node_modules/.cache
+
+# OS files
+.DS_Store
+
+# env
+.env
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
