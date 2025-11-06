@@ -71,7 +71,7 @@ export function Locations ({ query }) {
     <div className='flex flex-col rounded-2xl border'>
       <div className='flex items-center justify-between p-3'>
         <div className='font-semibold'>Locations</div>
-        <div className='text-sm text-gray-500'>{query ? `query: ${query}` : '請在上方建立查詢'}</div>
+        <div className='text-sm text-gray-500'>{query ? `query: ${query}` : 'Please build a query above'}</div>
       </div>
 
       <div className='flex flex-wrap items-end gap-3 px-3 pb-2 text-sm'>
@@ -86,7 +86,7 @@ export function Locations ({ query }) {
         </label>
       </div>
 
-      {!query && <div className='px-3 pb-4 text-sm text-gray-500'>尚未提供查詢字串。</div>}
+      {!query && <div className='px-3 pb-4 text-sm text-gray-500'>No query provided.</div>}
       {query && loading && (
         <div className='grid gap-3 p-3'>
           {Array.from({ length: 6 }).map((_, i) => (
@@ -122,7 +122,7 @@ export function Locations ({ query }) {
             </thead>
             <tbody>
               {pageRows.length === 0 ? (
-                <tr><td colSpan={4} className='px-3 py-4 text-gray-500'>無資料</td></tr>
+                <tr><td colSpan={4} className='px-3 py-4 text-gray-500'>No data</td></tr>
               ) : (
                 pageRows.map((r, i) => (
                   <tr key={i} className={cls(i % 2 ? 'bg-white' : 'bg-gray-50')}>
@@ -140,11 +140,11 @@ export function Locations ({ query }) {
 
       {query && !loading && !err && (
         <div className='flex items-center justify-between border-t p-3 text-sm'>
-          <div>共 <b>{sorted.length}</b> 筆，頁 <b>{page}</b>/<b>{totalPages}</b></div>
+          <div>Total <b>{sorted.length}</b> rows, page <b>{page}</b>/<b>{totalPages}</b></div>
           <div className='flex items-center gap-2'>
             <button disabled={page <= 1} onClick={() => setPage(1)} className='rounded-lg border px-2 py-1 disabled:opacity-40'>⏮</button>
-            <button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className='rounded-lg border px-2 py-1 disabled:opacity-40'>上一頁</button>
-            <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className='rounded-lg border px-2 py-1 disabled:opacity-40'>下一頁</button>
+            <button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))} className='rounded-lg border px-2 py-1 disabled:opacity-40'>Prev</button>
+            <button disabled={page >= totalPages} onClick={() => setPage(p => Math.min(totalPages, p + 1))} className='rounded-lg border px-2 py-1 disabled:opacity-40'>Next</button>
             <button disabled={page >= totalPages} onClick={() => setPage(totalPages)} className='rounded-lg border px-2 py-1 disabled:opacity-40'>⏭</button>
           </div>
         </div>

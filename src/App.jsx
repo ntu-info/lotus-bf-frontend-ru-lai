@@ -1,4 +1,3 @@
-
 import { useCallback, useRef, useState, useEffect } from 'react'
 import logoImg from './logo 神經與心理學.png'
 import { Terms } from './components/Terms'
@@ -10,6 +9,17 @@ import './App.css'
 
 export default function App () {
   const [query, setQuery] = useUrlQueryState('q')
+  // theme state
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lotusbf.theme') || 'dark'
+    }
+    return 'dark'
+  })
+  useEffect(() => {
+    try { localStorage.setItem('lotusbf.theme', theme) } catch (e) {}
+  }, [theme])
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark')
 
   const handlePickTerm = useCallback((t) => {
     setQuery((q) => (q ? `${q} ${t}` : t))
@@ -19,6 +29,8 @@ export default function App () {
   const gridRef = useRef(null)
   const [sizes, setSizes] = useState([28, 44, 28]) // [left, middle, right]
   const MIN_PX = 240
+  const [isViewerFocused, setIsViewerFocused] = useState(false)
+  const [isStudiesFocused, setIsStudiesFocused] = useState(false)
 
   const startDrag = (which, e) => {
     e.preventDefault()
@@ -57,12 +69,16 @@ export default function App () {
     window.addEventListener('mouseup', onMouseUp)
   }
 
+  // If either pane is focused, allocate more space to it. Ensure mutual exclusion.
+  const effectiveSizes = isViewerFocused ? [15, 15, 70]
+    : isStudiesFocused ? [6, 88, 6] // squeeze Terms and Viewer, expand Studies (middle)
+    : sizes
+
   return (
-    <div className="app theme-dark">
+    <div className={`app ${theme === 'dark' ? 'theme-dark' : 'theme-light'}`}>
       {/* Inline style injection to enforce no-hover look */}
       <style>{`
-        :root {
-          --primary-600: #2563eb;
+  :root {
           --primary-700: #1d4ed8;
           --primary-800: #1e40af;
           --border: #e5e7eb;
@@ -70,8 +86,6 @@ export default function App () {
         .app { padding-right: 0 !important; }
         .app__grid { width: 100vw; max-width: 100vw; }
         /* Header layout: left 25% (title/logo), right 75% (query) */
-        .app__header { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
-        .app__header-left { flex: 0 0 25%; display: flex; align-items: center; }
   .app__logo-img { width: 64px; height: auto; object-fit: contain; border-radius: 6px; margin-top: 10px; }
         .app__header-right { flex: 1 1 75%; }
         .app__query-card { margin: 0; }
@@ -162,43 +176,73 @@ export default function App () {
   .card { box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 8px; background: #fff; }
       `}</style>
 
-  <header className="app__header">
+      <header className="app__header">
         <div className="app__header-left" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <img src={logoImg} alt="神經與心理學" className="app__logo-img" />
+          <img src={logoImg} alt="Neuroscience and Psychology" className="app__logo-img" />
           <div className="app__title-block" style={{ display: 'flex', flexDirection: 'column' }}>
             <h1 className="app__title">LoTUS-BF</h1>
             <div className="app__subtitle">
               <span className='app__subtitle-line'>Location-or-Term Unified Search</span>
               <span className='app__subtitle-line'>for Brain Functions</span>
             </div>
-          </div>
         </div>
-        <div className="app__header-right">
+  </div>{/* end header-left */}
+  <div className="app__header-right">
           <section className="card app__query-card">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <QueryBuilder query={query} setQuery={setQuery} />
-        <div style={{ marginLeft: 10 }} />
+              <button
+                onClick={() => {
+                  setIsViewerFocused(v => {
+                    const next = !v
+                    if (next) setIsStudiesFocused(false)
+                    return next
+                  })
+                }}
+                aria-pressed={isViewerFocused}
+                className="btn btn-deepblue"
+                style={{ marginLeft: 8 }}
+              >
+                {isViewerFocused ? 'Unfocus Viewer' : 'Focus Viewer'}
+              </button>
+              <button
+                onClick={() => {
+                  setIsStudiesFocused(s => {
+                    const next = !s
+                    if (next) setIsViewerFocused(false)
+                    return next
+                  })
+                }}
+                aria-pressed={isStudiesFocused}
+                className="btn btn-deepblue"
+                style={{ marginLeft: 8 }}
+              >
+                {isStudiesFocused ? 'Unfocus Studies' : 'Focus Studies'}
+              </button>
+              <button onClick={toggleTheme} className="btn btn-deepblue" style={{ marginLeft: 8 }}>
+                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              </button>
             </div>
           </section>
         </div>
-      </header>
+  </header>
 
       <main className="app__grid" ref={gridRef}>
-        <section className="card terms" style={{ flexBasis: `${sizes[0]}%` }}>
+  <section className="card terms" style={{ flexBasis: `${effectiveSizes[0]}%` }}>
           <div className="card__title">Terms</div>
           <Terms onPickTerm={handlePickTerm} />
         </section>
 
         <div className="resizer" aria-label="Resize left/middle" onMouseDown={(e) => startDrag(0, e)} />
 
-        <section className="card" style={{ flexBasis: `${sizes[1]}%` }}>
+        <section className={`card studies ${isStudiesFocused ? 'studies-focused' : ''}`} style={{ flexBasis: `${effectiveSizes[1]}%` }}>
           <Studies query={query} />
         </section>
 
         <div className="resizer" aria-label="Resize middle/right" onMouseDown={(e) => startDrag(1, e)} />
 
-        <section className="card" style={{ flexBasis: `${sizes[2]}%` }}>
-          <NiiViewer query={query} />
+        <section className={`card ${isViewerFocused ? 'viewer-focused' : ''}`} style={{ flexBasis: `${effectiveSizes[2]}%` }}>
+          <NiiViewer query={query} isFocused={isViewerFocused} expandedHeight={isViewerFocused ? 340 : 260} />
         </section>
       </main>
     </div>

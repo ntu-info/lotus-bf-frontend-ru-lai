@@ -53,11 +53,13 @@ export function Studies ({ query }) {
 
   const sorted = useMemo(() => {
     const arr = [...rows]
-    // Always sort primarily by year (desc) then by title (asc) for stable academic ordering.
+    // Sort by year (asc/desc based on sortDir), then by title (asc)
     arr.sort((a, b) => {
       const ay = Number(a?.year || 0)
       const by = Number(b?.year || 0)
-      if (ay !== by) return by - ay // descending year
+      if (ay !== by) {
+        return sortDir === 'asc' ? (ay - by) : (by - ay)
+      }
       const at = String(a?.title || '').toLowerCase()
       const bt = String(b?.title || '').toLowerCase()
       return at.localeCompare(bt, 'en')
@@ -91,9 +93,19 @@ export function Studies ({ query }) {
         <div className='card__title'>Studies</div>
         <div className='flex items-center gap-2'>
           <div className='text-sm text-gray-500 hidden sm:block'>{/* {query ? `Query: ${query}` : 'Query: (empty)'} */}</div>
-          <button title='Show favorites' onClick={() => { setShowFavOnly(s => !s); setPage(1) }} className={`px-2 py-1 rounded border ${showFavOnly ? 'bg-yellow-50 border-yellow-200' : ''}`}>
+          <button title='Show favorites' onClick={() => { setShowFavOnly(s => !s); setPage(1) }} className={`btn-deepblue px-2 py-1 rounded ${showFavOnly ? '' : ''}`}>
             ⭐ Favorites ({Object.keys(studyFavs).length})
           </button>
+          <div style={{ marginLeft: 8 }}>
+            <button
+              title={`Sort by year (${sortDir === 'asc' ? 'asc' : 'desc'})`}
+              onClick={() => changeSort('year')}
+              className='btn-deepblue px-2 py-1 rounded'
+              style={{ minWidth: 118 }}
+            >
+              Sorted by year {sortDir === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -126,7 +138,16 @@ export function Studies ({ query }) {
                     <span className='text-xs text-gray-500'>{r.journal || ''}</span>
                   </div>
                   <div className='flex-1'>
-                    <div className='text-base md:text-xl font-extrabold leading-tight text-gray-900 mb-1' style={{ fontWeight: 900, fontSize: '1.12rem' }}>{r.title}</div>
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent(r.title || '')}`}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='text-base md:text-xl font-extrabold leading-tight text-gray-900 mb-1 hover:underline study-title-link'
+                      style={{ fontWeight: 900, fontSize: '1.12rem' }}
+                      title='Open Google search for this title'
+                    >
+                      {r.title}
+                    </a>
                     <div className='text-sm text-gray-700 mt-1'>{r.authors || ''}</div>
                   </div>
                   <div className='flex items-center gap-2'>

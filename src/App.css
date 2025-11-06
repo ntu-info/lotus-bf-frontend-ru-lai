@@ -1,4 +1,3 @@
-
 /* App.css baseline (hoverless look is enforced inline in App.jsx too) */
 :root {
   /* Light-mode defaults: light background and dark text */
@@ -7,9 +6,12 @@
   --muted: #4b5563;
   --border: #e6edf8;
   --radius: 12px;
-  --primary-600: #1d4ed8;
-  --primary-500: #2563eb;
-  --accent: #059669;
+  --primary-600: #0f766e; /* teal - professional */
+  --primary-500: #0d9488;
+  --accent: #0b7285; /* muted teal/sea */
+  /* Deeper tech palette variants (used for hover/shadows) */
+  --primary-700: #053146; /* deep teal-blue */
+  --primary-400: #12919f;
   --card-shadow: 0 8px 20px rgba(15,23,42,0.06);
   --btn-font-size: 13px;
   --btn-py: 8px;
@@ -45,8 +47,10 @@ body {
   --fg: #e6eef8; /* title/subtitle color stays light when forced */
   --muted: #9aa8bd;
   --border: rgba(255,255,255,0.06);
-  --primary-600: #60a5fa;
-  --primary-500: #3aa0ff;
+  --primary-600: #66d9cc;
+  --primary-500: #34b3a9;
+  --primary-700: #053146;
+  --primary-400: #12919f;
   --card-shadow: 0 10px 30px rgba(2,6,10,0.75);
   /* Query input colors for dark mode (professional muted tones) */
   --qb-bg: #0f1724;
@@ -60,11 +64,31 @@ body {
 .theme-dark .app__title, .theme-dark .app__subtitle {
   color: var(--fg) !important; /* keep title and subtitle light */
 }
-/* In both modes keep content text black for your request */
-.app, .card, .card * { color: #0b0b0b; }
-/* In dark mode, make page background deep and cards slightly darker (but still provide contrast for black text) */
+
+/* In dark mode, render main content text black as requested */
+.theme-dark, .theme-dark .card, .theme-dark .card * { color: #0b0b0b !important; }
+
+/* Exception: make NiiViewer Threshold bar labels/controls white in dark mode */
+.theme-dark .niiviewer-controls .threshold-row.bar-black .niilabel,
+.theme-dark .niiviewer-controls .threshold-row.bar-black select,
+.theme-dark .niiviewer-controls .threshold-row.bar-black input[type='number'] {
+  color: #ffffff !important;
+}
+.theme-dark .niiviewer-controls .threshold-row.bar-black option {
+  color: #111111 !important; /* dropdown list items stay readable on white popup */
+  background: #ffffff !important;
+}
+
+/* Optional explicit light theme hook */
+.theme-light { background: var(--bg); color: var(--fg); }
+
+/* Remove forced universal black text so themes can invert */
+/* Define a card background token so we can swap in dark mode */
+:root { --card-bg: linear-gradient(180deg, #ffffff, #fbfdff); }
+.card { background: var(--card-bg); }
 .theme-dark { background-color: var(--bg); }
-.theme-dark .card { background: linear-gradient(180deg, #f3f6f9, #edf3fb); box-shadow: var(--card-shadow); border: 1px solid rgba(255,255,255,0.04); }
+.theme-dark { --card-bg: linear-gradient(180deg,#0f1724,#09121f); }
+.theme-dark .card { color: var(--fg); border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 10px 28px rgba(2,10,22,0.55); }
 
 /* smooth color transitions when toggling theme */
 .app, .card, body {
@@ -72,17 +96,17 @@ body {
 }
 
 .app__header { margin-bottom: 14px; }
-.app__title { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: .2px; }
-.app__subtitle { margin-top: 4px; color: var(--muted); font-size: 13px; max-width: 48ch; }
+.app__title { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: .2px; }
+.app__subtitle { margin-top: 6px; color: var(--muted); font-size: 14px; max-width: 48ch; }
 
 .app__subtitle-line { display: block; line-height: 1.05; }
 .app__subtitle-line + .app__subtitle-line { margin-top: 2px; }
 
 /* Header layout: logo on far left, title/subtitle to the right */
-.app__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-.app__header-left { display: flex; align-items: center; gap: 16px; }
-.app__logo-img { width: 84px; height: auto; object-fit: contain; border-radius: 6px; }
-.app__title-block { display: flex; flex-direction: column; align-items: flex-start; }
+.app__header { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.app__header-left { display: flex; align-items: center; gap: 20px; }
+.app__logo-img { width: 100px; height: auto; object-fit: contain; border-radius: 6px; }
+.app__title-block { display: flex; flex-direction: column; align-items: flex-start; margin-left: 8px; }
 
 /* Keep title styling the same (weight/color/size preserved) */
 .app__title { font-weight: 800; color: var(--fg); font-size: 24px; }
@@ -94,7 +118,7 @@ body {
   .app__title-block { align-items: center; }
   .app__subtitle { max-width: 100%; }
   .app__subtitle-line { text-align: center; }
-  .app__logo-img { width: 72px; }
+  .app__logo-img { width: 88px; }
 }
 
 /* Slightly larger title for dashboard feel */
@@ -103,16 +127,22 @@ body {
 .app__grid { display: flex; gap: 0; width: 100%; }
 .app__grid > .card { flex: 1 1 0; min-width: 240px; overflow: auto; }
 
+/* When viewer is focused, emphasize it visually */
+.viewer-focused { position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.35); transform: translateY(-6px); z-index: 20; }
+.viewer-focused .niiviewer-card { border: 2px solid rgba(96,165,250,0.18); box-shadow: 0 30px 60px rgba(2,6,23,0.32); }
+.viewer-focused .niiviewer-card canvas { outline: 3px solid rgba(96,165,250,0.08); }
+
+.studies-focused { border: 2px solid rgba(34,197,94,0.18); box-shadow: 0 18px 40px rgba(2,6,23,0.12); }
+.studies-focused .card__title { color: rgba(34,197,94,0.95); }
+
 .resizer { width: 8px; cursor: col-resize; position: relative; user-select: none; touch-action: none; align-self: stretch; background: transparent; }
 .resizer::after { content:''; position:absolute; top:12px; bottom:12px; left:3px; width:2px; background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.02)); border-radius:2px; }
 .resizer:hover::after { background: linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.04)); }
 
 .card { background: linear-gradient(180deg, #ffffff, #fbfdff); border: 1px solid rgba(34,67,120,0.04); border-radius: var(--radius); padding:14px; box-shadow: var(--card-shadow); }
 .card__title { font-weight:700; margin-bottom:12px; color: var(--fg); }
-/* Force section titles to black for readability across modes */
-.terms .card__title, .studies .card__title, .niiviewer .card__title, .qb .card__title {
-  color: #0b0b0b !important;
-}
+/* Section titles follow fg color now (remove forced black) */
+.terms .card__title, .studies .card__title, .niiviewer .card__title, .qb .card__title { color: var(--fg) !important; }
 .card--stack > .divider { height:1px; background:var(--border); margin:12px 0; }
 
 .hint { margin-top: 8px; color: var(--muted); font-size: 12px; }
@@ -120,21 +150,26 @@ body {
 
 /* Downsized buttons (no hover/active change) */
 button, .btn, [role="button"], .button {
-  background: linear-gradient(180deg, var(--primary-600), var(--primary-500));
-  color:#fff;
+  background: linear-gradient(180deg, var(--primary-700), var(--primary-600));
+  color:#ffffff;
   border:none;
-  border-radius: var(--btn-radius);
+  border-radius: calc(var(--btn-radius) - 2px);
   padding: var(--btn-py) var(--btn-px);
   font-weight:700;
   font-size: var(--btn-font-size);
   line-height:1.1;
   cursor:pointer;
-  box-shadow: 0 6px 14px rgba(31,111,235,0.12);
+  box-shadow: 0 8px 22px rgba(3,22,48,0.18), inset 0 -4px 10px rgba(0,0,0,0.06);
+  transition: transform 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
 }
-button:hover, .btn:hover, [role="button"]:hover, .button:hover,
+button:hover, .btn:hover, [role="button"]:hover, .button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(3,22,48,0.22), inset 0 -4px 14px rgba(0,0,0,0.08);
+  background: linear-gradient(180deg, var(--primary-600), var(--primary-500));
+}
 button:active, .btn:active, [role="button"]:active, .button:active {
-  background: var(--primary-600);
-  color: #fff;
+  transform: translateY(0);
+  box-shadow: 0 6px 12px rgba(3,22,48,0.12);
 }
 button:disabled, .btn:disabled { opacity:.55; cursor:not-allowed; }
 
@@ -153,6 +188,25 @@ input[type=range] {
   background: linear-gradient(90deg, rgba(37,99,235,0.15), rgba(37,99,235,0.05));
   border-radius: 999px;
 }
+/* Operator buttons used in QueryBuilder (AND/OR/NOT/Reset) */
+.operator-btn {
+  background: linear-gradient(180deg, var(--primary-700), var(--primary-600));
+  border: 1px solid rgba(8,77,94,0.14);
+  color: #eaf7f8;
+  font-weight: 800;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(4,36,57,0.16), inset 0 -3px 8px rgba(0,0,0,0.06);
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease, text-shadow 120ms ease;
+}
+.operator-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 46px rgba(4,36,57,0.22);
+  background: linear-gradient(180deg, var(--primary-600), var(--primary-500));
+  text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+}
+.operator-btn:active { transform: translateY(0); box-shadow: 0 8px 18px rgba(4,36,57,0.12); }
+
+.qb .operator-btn + .operator-btn { margin-left: 6px; }
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid var(--primary-600);
@@ -410,21 +464,9 @@ input[type=range]:focus { outline: none; }
   .terms__alpha-count { font-size: 11px }
 }
 
-/* Ensure certain app regions always use black text regardless of theme */
-.terms, .qb, .niiviewer, .studies {
-  color: #0b0b0b;
-}
+/* Let sections inherit theme colors */
+.terms, .qb, .niiviewer, .studies { color: var(--fg); }
 .terms * , .qb * , .niiviewer * , .studies * { color: inherit; }
-
-/* Ensure Terms specifically remain black even under theme-dark or utility class overrides */
-.theme-dark .terms, .theme-dark .terms * {
-  color: #0b0b0b !important;
-}
-
-/* User request: make `terms` text always black in every theme */
-.terms, .terms * {
-  color: #0b0b0b !important;
-}
 
 .app__footer { margin-top:16px; color:var(--muted); font-size:12px; display:flex; gap:10px; align-items:center; border-top:1px solid var(--border); padding-top:12px; }
 
@@ -437,24 +479,91 @@ input[type=range]:focus { outline: none; }
 
 /* QueryBuilder fallback styles (when Tailwind classes are not present) */
 .qb__input {
+  /* Tech-style gradient + glow (override previous professional flat style) */
+  --qb-tech-bg: linear-gradient(180deg,#0c1c3d 0%, #081326 100%);
+  --qb-tech-bg-hover: linear-gradient(180deg,#11274f 0%, #0b182f 100%);
+  --qb-tech-bg-active: linear-gradient(180deg,#0b182f 0%, #071020 100%);
+  --qb-tech-border: rgba(80,140,255,0.55);
+  --qb-tech-border-hover: rgba(110,170,255,0.8);
+  --qb-tech-border-focus: #5a8bff;
+  --qb-tech-text: #eaf2ff;
+  --qb-tech-placeholder: #9ab3e6;
   width: 100%;
   max-width: 100%;
   display: block;
-  padding: 10px 14px;
-  border: 1px solid var(--qb-border);
-  background: var(--qb-bg);
-  color: var(--qb-text);
-  border-radius: 12px;
+  padding: 11px 16px;
+  border: 1px solid var(--qb-tech-border);
+  background: var(--qb-tech-bg);
+  color: var(--qb-tech-text);
+  border-radius: 14px;
   outline: none;
-  box-shadow: 0 6px 12px rgba(2,6,23,0.04);
-  transition: box-shadow 160ms ease, border-color 160ms ease, background-color 160ms ease;
+  font-size: 14px;
+  letter-spacing: .3px;
+  /* Lightened shadow (reduced opacity/intensity) */
+  /* Even softer, tighter shadow */
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.025), 0 4px 12px rgba(2,12,30,0.26);
+  transition: box-shadow 180ms ease, border-color 160ms ease, background 220ms ease, filter 160ms ease;
+  backdrop-filter: saturate(135%) blur(3px);
 }
 
 .qb__input:focus {
-  box-shadow: 0 6px 18px var(--qb-focus-ring);
-  border-color: var(--primary-600);
+  border-color: var(--qb-tech-border-focus);
+  /* Softer focus glow */
+  box-shadow: 0 0 0 1.5px rgba(90,139,255,0.22), 0 6px 18px rgba(30,80,180,0.26);
+  filter: brightness(1.05) saturate(1.1);
 }
-.qb__input::placeholder { color: var(--qb-placeholder); }
+.qb__input:hover { background: var(--qb-tech-bg-hover); border-color: var(--qb-tech-border-hover); }
+.qb__input:active { background: var(--qb-tech-bg-active); filter: saturate(1.25); }
+.qb__input::placeholder { color: var(--qb-tech-placeholder); opacity:.9; }
+.qb__input:disabled { opacity:.55; cursor:not-allowed; }
+
+/* Light-mode variant (soft tech: airy gradient) */
+@media (prefers-color-scheme: light) {
+  .qb__input {
+    --qb-tech-bg: linear-gradient(180deg,#f8fbff 0%, #eaf2ff 100%);
+    --qb-tech-bg-hover: linear-gradient(180deg,#eef5ff 0%, #deeaff 100%);
+    --qb-tech-bg-active: linear-gradient(180deg,#deeaff 0%, #d2e3ff 100%);
+    --qb-tech-border: #93b5ff;
+    --qb-tech-border-hover: #7aa4ff;
+    --qb-tech-border-focus: #4d79ff;
+    --qb-tech-text: #132036;
+    --qb-tech-placeholder: #5b6b80;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.015), 0 3px 9px rgba(0,50,120,0.05);
+    backdrop-filter: none;
+  }
+  .qb__input:focus { box-shadow: 0 0 0 1.5px rgba(77,121,255,0.20), 0 6px 16px rgba(40,90,200,0.12); filter:none; }
+}
+
+/* Explicit dark theme override in case .theme-dark wrapper is used */
+.theme-dark .qb__input {
+  --qb-tech-bg: linear-gradient(180deg,#0a1429 0%, #071020 100%);
+  --qb-tech-bg-hover: linear-gradient(180deg,#0f1f3e 0%, #0a162c 100%);
+  --qb-tech-bg-active: linear-gradient(180deg,#0a162c 0%, #050a14 100%);
+  --qb-tech-border: rgba(95,150,255,0.55);
+  --qb-tech-border-hover: rgba(125,180,255,0.85);
+  --qb-tech-border-focus: #5a8bff;
+  --qb-tech-text: #eaf2ff;
+  --qb-tech-placeholder: #89a9d6;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 6px 18px rgba(2,16,40,0.36);
+}
+.theme-dark .qb__input:focus { box-shadow: 0 0 0 1.5px rgba(90,139,255,0.22), 0 7px 20px rgba(30,80,180,0.32); }
+.theme-dark .qb__input:hover { background: var(--qb-tech-bg-hover); }
+
+/* Remove native search field clear X (Safari) and decorations for cleaner tech look */
+.qb__input::-webkit-search-decoration,
+.qb__input::-webkit-search-cancel-button,
+.qb__input::-webkit-search-results-button,
+.qb__input::-webkit-search-results-decoration { display:none; }
+
+/* Ensure legibility in sections that force black text */
+.qb .qb__input,
+.terms .qb__input {
+  color: var(--qb-tech-text) !important;
+}
+.qb .qb__input::placeholder,
+.terms .qb__input::placeholder {
+  color: var(--qb-tech-placeholder) !important;
+}
 
 
 /* Ensure QueryBuilder input doesn't collapse too narrow */
@@ -462,4 +571,77 @@ input[type=range]:focus { outline: none; }
 .qb__input { width: 100%; min-width: 420px; }
 @media (min-width: 1024px) {
   .qb__input { min-width: 640px; }
+}
+
+/* Deep brown button variant for operator and focus buttons */
+.btn-brown {
+  background: #4a2f1b !important;
+  color: #f8ede2 !important;
+  border: 1px solid #3d2614 !important;
+  box-shadow: none !important;
+}
+.btn-brown:hover { background: #5a3a24 !important; color: #fff8ef !important; }
+.btn-brown:active { background: #3d2614 !important; }
+
+/* Increase specificity to beat generic .card button !important rules */
+.card button.btn-brown,
+.card .btn.btn-brown,
+.card .operator-btn.btn-brown {
+  background: #4a2f1b !important;
+  color: #f8ede2 !important;
+  border: 1px solid #3d2614 !important;
+  box-shadow: none !important;
+}
+.card button.btn-brown:hover,
+.card .btn.btn-brown:hover,
+.card .operator-btn.btn-brown:hover { background: #5a3a24 !important; color: #fff8ef !important; }
+.card button.btn-brown:active,
+.card .btn.btn-brown:active,
+.card .operator-btn.btn-brown:active { background: #3d2614 !important; }
+
+/* Deep blue button variant (for Terms letter buttons) */
+/* Unified button color = match dark background tone */
+.btn-deepblue {
+  background: #071025 !important; /* same as theme-dark --bg */
+  color: #ffffff !important;
+  border: 1px solid #0d1a3a !important; /* subtle outline */
+  box-shadow: none !important;
+}
+.btn-deepblue:hover { background: #0a1733 !important; }
+.btn-deepblue:active { background: #040a18 !important; }
+
+/* Apply deep blue to Terms alphabet buttons specifically */
+.terms .terms__alpha-button {
+  background: #071025 !important;
+  color: #ffffff !important;
+  border: 1px solid #0d1a3a !important;
+  box-shadow: none !important;
+}
+.terms .terms__alpha-button:hover { background: #0a1733 !important; }
+.terms .terms__alpha-button:active { background: #040a18 !important; }
+.terms .terms__alpha-letter { color: #ffffff !important; }
+.terms .terms__alpha-count.badge { background: rgba(255,255,255,0.15) !important; color: #ffffff !important; }
+
+/* Increase specificity for deep blue buttons inside cards and operator buttons */
+.card button.btn-deepblue,
+.card .btn.btn-deepblue,
+.card .operator-btn.btn-deepblue {
+  background: #071025 !important;
+  color: #ffffff !important;
+  border: 1px solid #0d1a3a !important;
+  box-shadow: none !important;
+}
+.card button.btn-deepblue:hover,
+.card .btn.btn-deepblue:hover,
+.card .operator-btn.btn-deepblue:hover {
+  background: #0a1733 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.card button.btn-deepblue:active,
+.card .btn.btn-deepblue:active,
+.card .operator-btn.btn-deepblue:active {
+  background: #040a18 !important;
+  transform: none !important;
 }
