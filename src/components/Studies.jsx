@@ -11,6 +11,12 @@ export function Studies ({ query }) {
   const [sortDir, setSortDir] = useState('desc') // 'asc' | 'desc'
   const [page, setPage] = useState(1)
   const pageSize = 20
+  const [studyFavs, setStudyFavs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('studies:favs') || '{}') } catch (e) { return {} }
+  })
+  const [showFavOnly, setShowFavOnly] = useState(false)
+
+  useEffect(() => { try { localStorage.setItem('studies:favs', JSON.stringify(studyFavs)) } catch (e) {} }, [studyFavs])
 
   useEffect(() => { setPage(1) }, [query])
 
@@ -47,26 +53,47 @@ export function Studies ({ query }) {
 
   const sorted = useMemo(() => {
     const arr = [...rows]
-    const dir = sortDir === 'asc' ? 1 : -1
+    // Always sort primarily by year (desc) then by title (asc) for stable academic ordering.
     arr.sort((a, b) => {
-      const A = a?.[sortKey]
-      const B = b?.[sortKey]
-      // Numeric comparison for year; string comparison for other fields
-      if (sortKey === 'year') return (Number(A || 0) - Number(B || 0)) * dir
-      return String(A || '').localeCompare(String(B || ''), 'en') * dir
+      const ay = Number(a?.year || 0)
+      const by = Number(b?.year || 0)
+      if (ay !== by) return by - ay // descending year
+      const at = String(a?.title || '').toLowerCase()
+      const bt = String(b?.title || '').toLowerCase()
+      return at.localeCompare(bt, 'en')
     })
     return arr
   }, [rows, sortKey, sortDir])
 
-  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
-  const pageRows = sorted.slice((page - 1) * pageSize, page * pageSize)
+  // helper to create a stable key for a study (falls back to title+journal+year)
+  const studyKey = (r) => `${r?.journal || ''}|${r?.year || ''}|${(r?.title || '').slice(0,200)}`
+
+  const filteredSorted = useMemo(() => {
+    if (!showFavOnly) return sorted
+    return sorted.filter(r => !!studyFavs[studyKey(r)])
+  }, [sorted, showFavOnly, studyFavs])
+
+  const totalPages = Math.max(1, Math.ceil(filteredSorted.length / pageSize))
+  const pageRows = filteredSorted.slice((page - 1) * pageSize, page * pageSize)
+
+  const toggleStudyFav = (r) => {
+    const k = studyKey(r)
+    setStudyFavs(s => { const next = { ...s }; if (next[k]) delete next[k]; else next[k] = true; return next })
+  }
 
   return (
-    <div className='flex flex-col rounded-2xl border'>
+    <div className='studies flex flex-col rounded-2xl border shadow-sm'>
+      <style>{`
+        .terms__fav-btn { background: transparent; border: none; cursor: pointer; font-size: 18px; }
+        .terms__fav-btn.fav { color: #f6b93b; }
+      `}</style>
       <div className='flex items-center justify-between p-3'>
         <div className='card__title'>Studies</div>
-        <div className='text-sm text-gray-500'>
-           {/* {query ? `Query: ${query}` : 'Query: (empty)'} */}
+        <div className='flex items-center gap-2'>
+          <div className='text-sm text-gray-500 hidden sm:block'>{/* {query ? `Query: ${query}` : 'Query: (empty)'} */}</div>
+          <button title='Show favorites' onClick={() => { setShowFavOnly(s => !s); setPage(1) }} className={`px-2 py-1 rounded border ${showFavOnly ? 'bg-yellow-50 border-yellow-200' : ''}`}>
+            ⭐ Favorites ({Object.keys(studyFavs).length})
+          </button>
         </div>
       </div>
 
@@ -86,40 +113,29 @@ export function Studies ({ query }) {
       )}
 
       {query && !loading && !err && (
-        <div className='overflow-auto'>
-          <table className='min-w-full text-sm'>
-            <thead className='sticky top-0 bg-gray-50 text-left'>
-              <tr>
-                {[
-                  { key: 'year', label: 'Year' },
-                  { key: 'journal', label: 'Journal' },
-                  { key: 'title', label: 'Title' },
-                  { key: 'authors', label: 'Authors' }
-                ].map(({ key, label }) => (
-                  <th key={key} className='cursor-pointer px-3 py-2 font-semibold' onClick={() => changeSort(key)}>
-                    <span className='inline-flex items-center gap-2'>
-                      {label}
-                      <span className='text-xs text-gray-500'>{sortKey === key ? (sortDir === 'asc' ? '▲' : '▼') : ''}</span>
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {pageRows.length === 0 ? (
-                <tr><td colSpan={4} className='px-3 py-4 text-gray-500'>No data</td></tr>
-              ) : (
-                pageRows.map((r, i) => (
-                  <tr key={i} className={classNames(i % 2 ? 'bg-white' : 'bg-gray-50')}>
-                    <td className='whitespace-nowrap px-3 py-2 align-top'>{r.year ?? ''}</td>
-                    <td className='px-3 py-2 align-top'>{r.journal || ''}</td>
-                    <td className='max-w-[540px] px-3 py-2 align-top'><div className='truncate' title={r.title}>{r.title || ''}</div></td>
-                    <td className='px-3 py-2 align-top'>{r.authors || ''}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        <div className='p-3'>
+          <div className='grid gap-3'>
+            {pageRows.length === 0 ? (
+              <div className='text-gray-500'>No data</div>
+            ) : (
+              pageRows.map((r, i) => (
+                <div key={i} className='p-3 rounded-lg bg-white shadow-sm border flex flex-col md:flex-row md:items-start gap-2'>
+                  <div className='w-36 text-sm text-gray-700 font-medium'>
+                    <span className='font-medium'>{r.year ?? ''}</span>
+                    <span className='px-2 text-xs text-gray-400' aria-hidden>•</span>
+                    <span className='text-xs text-gray-500'>{r.journal || ''}</span>
+                  </div>
+                  <div className='flex-1'>
+                    <div className='text-base md:text-xl font-extrabold leading-tight text-gray-900 mb-1' style={{ fontWeight: 900, fontSize: '1.12rem' }}>{r.title}</div>
+                    <div className='text-sm text-gray-700 mt-1'>{r.authors || ''}</div>
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <button onClick={() => toggleStudyFav(r)} className={`terms__fav-btn ${studyFavs[studyKey(r)] ? 'fav' : ''}`} aria-label='Toggle favorite'>{studyFavs[studyKey(r)] ? '★' : '☆'}</button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 

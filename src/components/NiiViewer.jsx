@@ -59,6 +59,21 @@ export function NiiViewer({ query }) {
 
   const canvases = [useRef(null), useRef(null), useRef(null)]
 
+  // slider transient positions (so slider moves smoothly) and debounce timers
+  const [sliderPos, setSliderPos] = useState({ x: 0, y: 0, z: 0 })
+  const debounceRefs = useRef({ x: null, y: null, z: null })
+
+  useEffect(() => {
+    setSliderPos({ x: ix, y: iy, z: iz })
+  }, [ix, iy, iz])
+
+  useEffect(() => {
+    return () => {
+      // clear any pending debounce timers on unmount
+      Object.values(debounceRefs.current).forEach(t => { if (t) clearTimeout(t) })
+    }
+  }, [])
+
   const mapUrl = useMemo(() => {
     if (!query) return ''
     const u = new URL(`${API_BASE}/query/${encodeURIComponent(query)}/nii`)
@@ -246,7 +261,7 @@ const coord2idx = (c_mm, n, axis) => {
   // draw one slice (upright orientation via vertical flip)
   function drawSlice (canvas, axis /* 'z' | 'y' | 'x' */, index) {
     const [nx, ny, nz] = dims
-    
+
     // 若要讓 x>0 出現在畫面右側，就在取樣時把 X 軸做水平翻轉
     const sx = (x) => (X_RIGHT_ON_SCREEN_RIGHT ? (nx - 1 - x) : x);
     const bg  = bgRef.current
@@ -261,8 +276,17 @@ const coord2idx = (c_mm, n, axis) => {
     if (axis === 'y') { w = nx; h = nz; if (bgOK)  getBG  = (x,y)=> bg.data[sx(x) + index*nx + y*nx*ny]; if (mapOK) getMap = (x,y)=> map.data[sx(x) + index*nx + y*nx*ny] }
     if (axis === 'x') { w = ny; h = nz; if (bgOK)  getBG  = (x,y)=> bg.data[index + x*nx + y*nx*ny]; if (mapOK) getMap = (x,y)=> map.data[index + x*nx + y*nx*ny] }
 
-    canvas.width = w; canvas.height = h
+    // HiDPI support: scale canvas by devicePixelRatio for crisp rendering
+    const dpr = Math.max(1, window.devicePixelRatio || 1)
+    canvas.style.width = w + 'px'
+    canvas.style.height = h + 'px'
+    canvas.width = Math.max(1, Math.floor(w * dpr))
+    canvas.height = Math.max(1, Math.floor(h * dpr))
     const ctx = canvas.getContext('2d', { willReadFrequently: false })
+    // scale drawing so that 1 canvas pixel maps to 1 CSS pixel
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+    // create image buffer at logical size (w x h)
     const img = ctx.createImageData(w, h)
 
     const alpha = Math.max(0, Math.min(1, overlayAlpha))
@@ -308,9 +332,11 @@ const coord2idx = (c_mm, n, axis) => {
         p += 4
       }
     }
+
+    // putImageData expects coordinates in CSS pixels; because we've set transform, this will draw crisply
     ctx.putImageData(img, 0, 0)
 
-    // draw green crosshairs
+    // draw green crosshairs (coordinates in CSS pixels)
     ctx.save()
     ctx.strokeStyle = '#00ff00'
     ctx.lineWidth = 1
@@ -399,7 +425,17 @@ const coord2idx = (c_mm, n, axis) => {
   const nsLabelCls = 'mr-1 text-sm'
 
   return (
-    <div className='flex flex-col gap-3'>
+    <div className='niiviewer flex flex-col gap-3'>
+      <style>{`
+        /* NiiViewer responsive controls */
+        .niiviewer-controls .row { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+        .niiviewer-controls .coords { display: flex; gap: 0.75rem; align-items: center; flex-wrap: nowrap; }
+        @media (max-width: 768px) {
+          .niiviewer-controls .row { flex-direction: column; align-items: stretch; }
+          .niiviewer-controls .coords { flex-direction: row; flex-wrap: wrap; }
+          .niiviewer-controls .coords label { flex: 1 1 45%; min-width: 120px; }
+        }
+      `}</style>
       <div className='flex items-center justify-between'>
         <div className='card__title'>NIfTI Viewer</div>
         <div className='flex items-center gap-2 text-sm text-gray-500'>
@@ -408,72 +444,29 @@ const coord2idx = (c_mm, n, axis) => {
       </div>
 
       {/* --- Threshold mode & value --- */}
-      <div className='rounded-xl border p-3 text-sm'>
-        <label className='flex items-center gap-2'>
-          <span>Threshold mode</span>
-          <select value={thrMode} onChange={e=>setThrMode(e.target.value)} className='rounded-lg border px-2 py-1'>
-            <option value='value'>Value</option>
-            <option value='pctl'>Percentile</option>
-          </select>
-        </label>
-        <br />
-        {thrMode === 'value' ? (
-          <>
-            <label className='flex items-center gap-2'>
-              <span>Threshold</span>
-              <input type='number' step='0.01' value={thrValue} onChange={e=>setThrValue(Number(e.target.value))} className='w-28 rounded-lg border px-2 py-1' />
+      <div className='rounded-xl border p-3 text-sm niiviewer-controls controls--capsule'>
+        <div className='row threshold-row bar-black controls--modern'>
+          <label className='controls--field'>
+            <span className='niilabel'>Threshold mode</span>
+            <select value={thrMode} onChange={e=>setThrMode(e.target.value)}>
+              <option value='value'>Value</option>
+              <option value='pctl'>Percentile</option>
+            </select>
+          </label>
+          {thrMode === 'value' ? (
+            <label className='controls--field'>
+              <span className='niilabel'>Threshold</span>
+              <input type='number' step='0.01' value={thrValue} onChange={e=>setThrValue(Number(e.target.value))} />
             </label>
-            <br />
-          </>
-        ) : (
-          <>
-            <label className='flex items-center gap-2'>
-              <span>Percentile</span>
-              <input type='number' min={50} max={99.9} step={0.5} value={pctl} onChange={e=>setPctl(Number(e.target.value)||95)} className='w-24 rounded-lg border px-2 py-1' />
+          ) : (
+            <label className='controls--field'>
+              <span className='niilabel'>Percentile</span>
+              <input type='number' min={50} max={99.9} step={0.5} value={pctl} onChange={e=>setPctl(Number(e.target.value)||95)} />
             </label>
-            <br />
-          </>
-        )}
-
-        {/* Neurosynth-style coordinate inputs (signed, centered at 0) */}
-        <div className='mt-1 flex items-center gap-4'>
-          <label className='flex items-center'>
-            <span className={nsLabelCls}>X (mm):</span>
-            <input
-              type='text' inputMode='decimal' pattern='-?[0-9]*([.][0-9]+)?'
-              className={nsInputCls}
-              value={cx}
-              onChange={e=>setCx(e.target.value)}
-              onBlur={()=>commitCoord('x')}
-              onKeyDown={e=>{ if(e.key==='Enter'){ commitCoord('x') } }}
-              aria-label='X coordinate (centered)'
-            />
-          </label>
-          <label className='flex items-center'>
-            <span className={nsLabelCls}>Y (mm):</span>
-            <input
-              type='text' inputMode='decimal' pattern='-?[0-9]*([.][0-9]+)?'
-              className={nsInputCls}
-              value={cy}
-              onChange={e=>setCy(e.target.value)}
-              onBlur={()=>commitCoord('y')}
-              onKeyDown={e=>{ if(e.key==='Enter'){ commitCoord('y') } }}
-              aria-label='Y coordinate (centered)'
-            />
-          </label>
-          <label className='flex items-center'>
-            <span className={nsLabelCls}>Z (mm):</span>
-            <input
-              type='text' inputMode='decimal' pattern='-?[0-9]*([.][0-9]+)?'
-              className={nsInputCls}
-              value={cz}
-              onChange={e=>setCz(e.target.value)}
-              onBlur={()=>commitCoord('z')}
-              onKeyDown={e=>{ if(e.key==='Enter'){ commitCoord('z') } }}
-              aria-label='Z coordinate (centered)'
-            />
-          </label>
+          )}
         </div>
+
+  {/* per-slice coordinate inputs are rendered below each canvas */}
       </div>
 
       {/* --- Brain views --- */}
@@ -492,12 +485,53 @@ const coord2idx = (c_mm, n, axis) => {
       )}
 
       {!!nx && (
-        <div className='grid grid-cols-3 gap-3' style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+        <div className='grid grid-cols-3 gap-6 items-stretch' style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16 }}>
           {sliceConfigs.map(({ key, name, axisLabel, index, setIndex, max, canvasRef }) => (
-            <div key={key} className='flex flex-col gap-2'>
-              <div className='text-xs text-gray-600'>{name} ({axisLabel})</div>
-              <div className='flex items-center gap-2'>
-                <canvas ref={canvasRef} className='h-64 w-full rounded-xl border' onClick={(e)=>onCanvasClick(e, key)} style={{ cursor: 'crosshair' }} />
+            <div key={key} className='niiviewer-card flex flex-col gap-2 rounded-xl bg-white shadow-md p-3'>
+              <div className='flex items-center justify-between'>
+                <div className='text-xs text-gray-600'>{name} ({axisLabel})</div>
+                <div className='text-xs text-gray-600'>
+                  idx: {index} · {axisLabel} = {String(Number(idx2coord(index, axisLabel==='X'? nx : axisLabel==='Y'? ny : nz, axisLabel.toLowerCase())).toFixed(1))} mm
+                </div>
+              </div>
+              <div className='flex-1 flex items-center'>
+                <canvas ref={canvasRef} className='w-full h-full rounded-md border' onClick={(e)=>onCanvasClick(e, key)} style={{ cursor: 'crosshair', minHeight: 160 }} />
+              </div>
+              <div className='mt-2'>
+                <input
+                  type='range'
+                  min={0}
+                  max={max}
+                  value={key==='x' ? sliderPos.x : key==='y' ? sliderPos.y : sliderPos.z}
+                  onChange={e => {
+                    const v = Number(e.target.value)
+                    setSliderPos(p => ({ ...p, [key]: v }))
+                    // debounce commit
+                    if (debounceRefs.current[key]) clearTimeout(debounceRefs.current[key])
+                    debounceRefs.current[key] = setTimeout(() => {
+                      if (key === 'x') setIx(v)
+                      else if (key === 'y') setIy(v)
+                      else setIz(v)
+                      debounceRefs.current[key] = null
+                    }, 120)
+                  }}
+                  className='w-full'
+                />
+              </div>
+              {/* per-slice coordinate input aligned under this slice */}
+              <div className='mt-2 flex items-center gap-2'>
+                <label className='flex items-center gap-2'>
+                  <span className='text-xs text-gray-600'>{axisLabel} (mm):</span>
+                  <input
+                    type='text' inputMode='decimal' pattern='-?[0-9]*([.][0-9]+)?'
+                    className={nsInputCls}
+                    value={axisLabel === 'X' ? cx : axisLabel === 'Y' ? cy : cz}
+                    onChange={e => { if (axisLabel === 'X') setCx(e.target.value); else if (axisLabel === 'Y') setCy(e.target.value); else setCz(e.target.value) }}
+                    onBlur={() => { if (axisLabel === 'X') commitCoord('x'); else if (axisLabel === 'Y') commitCoord('y'); else commitCoord('z') }}
+                    onKeyDown={e => { if (e.key === 'Enter') { if (axisLabel === 'X') commitCoord('x'); else if (axisLabel === 'Y') commitCoord('y'); else commitCoord('z') } }}
+                    aria-label={`${axisLabel} coordinate (centered)`}
+                  />
+                </label>
               </div>
             </div>
           ))}
@@ -505,20 +539,19 @@ const coord2idx = (c_mm, n, axis) => {
       )}
 
       {/* map generation params */}
-      <div className='rounded-xl border p-3 text-sm'>
-        <label className='flex flex-col'>Gaussian FWHM:
-          <input type='number' step='0.5' value={fwhm} onChange={e=>setFwhm(Number(e.target.value)||0)} className='w-28 rounded-lg border px-2 py-1'/>
-          <br />
-        </label>
+      <div className='rounded-xl border p-3 text-sm controls--capsule'>
+        <div className='controls--field' style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className='niilabel'>Gaussian FWHM</span>
+          <input type='number' step='0.5' value={fwhm} onChange={e=>setFwhm(Number(e.target.value)||0)} style={{ width: 120 }} />
+        </div>
       </div>
 
       {/* overlay controls */}
-      <div className='rounded-xl border p-3 text-sm'>
-        <label className='flex items-center gap-2'>
-          <span>Overlay alpha</span>
+      <div className='rounded-xl border p-3 text-sm controls--capsule'>
+        <div className='controls--field' style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className='niilabel'>Overlay alpha</span>
           <input type='range' min={0} max={1} step={0.05} value={overlayAlpha} onChange={e=>setOverlayAlpha(Number(e.target.value))} className='w-40' />
-        </label>
-        <br />
+        </div>
       </div>
     </div>
   )

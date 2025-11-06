@@ -1,5 +1,6 @@
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useEffect } from 'react'
+import logoImg from './logo 神經與心理學.png'
 import { Terms } from './components/Terms'
 import { QueryBuilder } from './components/QueryBuilder'
 import { Studies } from './components/Studies'
@@ -57,7 +58,7 @@ export default function App () {
   }
 
   return (
-    <div className="app">
+    <div className="app theme-dark">
       {/* Inline style injection to enforce no-hover look */}
       <style>{`
         :root {
@@ -68,6 +69,19 @@ export default function App () {
         }
         .app { padding-right: 0 !important; }
         .app__grid { width: 100vw; max-width: 100vw; }
+        /* Header layout: left 25% (title/logo), right 75% (query) */
+        .app__header { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+        .app__header-left { flex: 0 0 25%; display: flex; align-items: center; }
+  .app__logo-img { width: 64px; height: auto; object-fit: contain; border-radius: 6px; margin-top: 10px; }
+        .app__header-right { flex: 1 1 75%; }
+        .app__query-card { margin: 0; }
+        /* Responsive: stack header on small screens */
+        @media (max-width: 768px) {
+          .app__header { flex-direction: column; align-items: stretch; }
+          .app__header-left, .app__header-right { flex: none; width: 100%; }
+          .app__header-left { margin-bottom: 8px; }
+          .app__query-card { width: 100%; }
+        }
         .card input[type="text"],
         .card input[type="search"],
         .card input[type="number"],
@@ -144,25 +158,40 @@ export default function App () {
           color: #fff !important;
           opacity: .55 !important;
         }
+  /* subtle card shadow and padding for visual separation */
+  .card { box-shadow: 0 1px 3px rgba(0,0,0,0.06); padding: 8px; background: #fff; }
       `}</style>
 
-      <header className="app__header">
-        <h1 className="app__title">LoTUS-BF</h1>
-        <div className="app__subtitle">Location-or-Term Unified Search for Brain Functions</div>
+  <header className="app__header">
+        <div className="app__header-left" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <img src={logoImg} alt="神經與心理學" className="app__logo-img" />
+          <div className="app__title-block" style={{ display: 'flex', flexDirection: 'column' }}>
+            <h1 className="app__title">LoTUS-BF</h1>
+            <div className="app__subtitle">
+              <span className='app__subtitle-line'>Location-or-Term Unified Search</span>
+              <span className='app__subtitle-line'>for Brain Functions</span>
+            </div>
+          </div>
+        </div>
+        <div className="app__header-right">
+          <section className="card app__query-card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <QueryBuilder query={query} setQuery={setQuery} />
+        <div style={{ marginLeft: 10 }} />
+            </div>
+          </section>
+        </div>
       </header>
 
       <main className="app__grid" ref={gridRef}>
-        <section className="card" style={{ flexBasis: `${sizes[0]}%` }}>
+        <section className="card terms" style={{ flexBasis: `${sizes[0]}%` }}>
           <div className="card__title">Terms</div>
           <Terms onPickTerm={handlePickTerm} />
         </section>
 
         <div className="resizer" aria-label="Resize left/middle" onMouseDown={(e) => startDrag(0, e)} />
 
-        <section className="card card--stack" style={{ flexBasis: `${sizes[1]}%` }}>
-          <QueryBuilder query={query} setQuery={setQuery} />
-          {/* <div className="hint">Current Query：<code className="hint__code">{query || '(empty)'}</code></div> */}
-          <div className="divider" />
+        <section className="card" style={{ flexBasis: `${sizes[1]}%` }}>
           <Studies query={query} />
         </section>
 
